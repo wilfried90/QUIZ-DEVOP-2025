@@ -1,13 +1,21 @@
-FROM python:3.11-slim
+# Utilisation de Node.js
+FROM node:18
 
+# Définir le dossier de travail
 WORKDIR /app
-RUN apt-get update \
-    && apt-get install -y build-essential gcc libpq-dev \
-    && pip install poetry==2.1.2 \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-COPY pyproject.toml poetry.lock ./
-ENV POETRY_VIRTUALENVS_CREATE=false
-RUN poetry install --no-interaction --no-ansi --no-root
+# Copier les fichiers de configuration
+COPY package.json package-lock.json ./
 
+# Installer les dépendances
+RUN npm install
+
+# Copier le reste des fichiers
 COPY . .
+
+# Définir le port de l’application
+ENV PORT=5000
+EXPOSE 5000
+
+# Démarrer le serveur
+CMD ["npm", "run", "dev"]
