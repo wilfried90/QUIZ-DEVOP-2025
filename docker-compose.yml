@@ -1,3 +1,5 @@
+version: "3.8"
+
 networks:
   backend:
     driver: bridge  # Isolation du trafic inter-services
@@ -42,12 +44,12 @@ services:
     image: grafana/grafana:latest
     restart: always
     ports:
-      - "3000:3000"
+      - "3001:3000"
     environment:
       GF_SECURITY_ADMIN_USER: ${GF_SECURITY_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GF_SECURITY_ADMIN_PASSWORD:-admin}
     volumes:
-      - ./grafana.ini:/etc/grafana/grafana.ini:ro
+      - ./monitoring/grafana_conf/grafana.ini:/etc/grafana/grafana.ini:ro
       - grafana_data:/var/lib/grafana
     networks:
       - backend
@@ -128,4 +130,3 @@ services:
       - backend
     depends_on:
       - server
-
