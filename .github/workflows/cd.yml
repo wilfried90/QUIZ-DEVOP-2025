@@ -1,0 +1,78 @@
+name: CD - Merge dev into main if docker-compose is OK
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  validate-compose:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Compose
+        run: |
+          docker compose -f docker-compose.yaml up -d
+          sleep 10
+          docker compose ps
+
+      - name: Vérifier que tous les services sont en état Up (avec timeout)
+        run: |
+          expected=$(docker compose config --services | wc -l)
+          timeout=30
+          interval=5
+          elapsed=0
+      
+          while [ $elapsed -lt $timeout ]; do
+            actual_up=$(docker compose ps --status=running --services | wc -l)
+            echo "→ $actual_up / $expected services sont 'Up' après $elapsed secondes"
+      
+            if [ "$actual_up" -eq "$expected" ]; then
+              echo "✅ Tous les services sont démarrés."
+              exit 0
+            fi
+      
+            sleep $interval
+            elapsed=$((elapsed + interval))
+          done
+      
+          echo "❌ Timeout atteint : tous les services ne sont pas 'Up'"
+          docker compose ps
+          docker compose logs --tail=50
+          exit 1
+
+  merge-to-main:
+    needs: validate-compose
+    if: ${{ success() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Merge dev into main
+        env:
+          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
+        run: |
+          git fetch origin
+          git checkout main
+          git merge origin/dev --no-ff --allow-unrelated-histories -m "Auto-merge dev into main after successful docker-compose check"
+          git push https://${{ secrets.PAT_TOKEN }}@github.com/${{ github.repository }} main
+
+  open-issue-on-failure:
+    if: ${{ failure() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create GitHub Issue
+        uses: peter-evans/create-issue-from-file@v4
+        with:
+          title: "Échec du docker compose suite au push dans dev"
+          content-filepath: ./docker-compose.log
+          labels: bug, CD
