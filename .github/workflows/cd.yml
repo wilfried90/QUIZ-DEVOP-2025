@@ -15,7 +15,7 @@ jobs:
 
       - name: Set up Docker Compose
         run: |
-          docker compose -f docker-compose.yaml up -d
+          docker compose -f docker-compose.yml up -d
           sleep 10
           docker compose ps
 
