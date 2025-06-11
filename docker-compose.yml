@@ -34,8 +34,8 @@ services:
         poetry run python manage.py runserver 0.0.0.0:8000
       "
     networks: [backend]
-    expose:
-      - "5000"
+    ports:
+      - "8000:8000"
     volumes:
       - ./server:/app
     depends_on:
